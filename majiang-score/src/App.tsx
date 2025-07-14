@@ -7,6 +7,7 @@ interface HuType {
   name: string;
   multiplier: number;
   desc: string;
+  mingGangType?: '点杠' | '自杠'; // 仅明杠用
 }
 
 const HU_TYPES: HuType[] = [
@@ -21,23 +22,66 @@ const HU_TYPES: HuType[] = [
   { name: "混一色", multiplier: 2, desc: "一种花色+字牌" },
   { name: "带幺九", multiplier: 2, desc: "每组都有1或9" },
   { name: "门清", multiplier: 2, desc: "没有碰过牌" },
-  { name: "明杠", multiplier: 2, desc: "明杠得分" },
-  { name: "暗杠", multiplier: 4, desc: "暗杠得分" }
+  { name: "明杠", multiplier: 2, desc: "明杠-点杠：他人打出自己杠，只收一家的钱", mingGangType: '点杠' },
+  { name: "明杠", multiplier: 2, desc: "明杠-自杠：自己摸牌后杠，三家都要给钱", mingGangType: '自杠' },
+  { name: "暗杠", multiplier: 4, desc: "暗杠得分，三家都要给钱" }
 ];
 
 function getRandomHuTypes(): HuType[] {
   // 随机生成1~3种胡牌类型组合，且不重复
   const count = Math.floor(Math.random() * 3) + 1;
   const shuffled = [...HU_TYPES].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
+  // 明杠只允许出现一种（点杠或自杠），且不与另一个明杠共存
+  let result: HuType[] = [];
+  for (let i = 0; i < shuffled.length && result.length < count; i++) {
+    const t = shuffled[i];
+    if (t.name === '明杠' && result.some(x => x.name === '明杠')) continue;
+    result.push(t);
+  }
+  return result;
 }
 
 function calcScore(types: HuType[]): number {
-  return types.reduce((score, t) => score * t.multiplier, BASE_SCORE);
+  // 明杠-点杠：只收一家的钱，显示单家得分
+  // 明杠-自杠、暗杠：三家都要给钱，显示总得分
+  let base = BASE_SCORE;
+  let multi = 1;
+  let mingGang: HuType | undefined = types.find(t => t.name === '明杠');
+  let anGang: HuType | undefined = types.find(t => t.name === '暗杠');
+  types.forEach(t => {
+    if (t.name === '明杠' || t.name === '暗杠') {
+      multi *= t.multiplier;
+    } else {
+      multi *= t.multiplier;
+    }
+  });
+  if (mingGang && mingGang.mingGangType === '点杠') {
+    // 只收一家的钱
+    return base * multi;
+  } else if (mingGang && mingGang.mingGangType === '自杠') {
+    // 三家都要给钱
+    return base * multi * 3;
+  } else if (anGang) {
+    // 暗杠三家都要给钱
+    return base * multi * 3;
+  }
+  return base * multi;
 }
 
 function calcFormula(types: HuType[]): string {
-  return [BASE_SCORE, ...types.map(t => t.multiplier)].join(' × ');
+  let base = BASE_SCORE;
+  let multiArr = types.map(t => t.multiplier);
+  let mingGang: HuType | undefined = types.find(t => t.name === '明杠');
+  let anGang: HuType | undefined = types.find(t => t.name === '暗杠');
+  let formula = [base, ...multiArr].join(' × ');
+  if (mingGang && mingGang.mingGangType === '点杠') {
+    return formula + '（只收一家）';
+  } else if (mingGang && mingGang.mingGangType === '自杠') {
+    return formula + ' × 3（三家都要给钱）';
+  } else if (anGang) {
+    return formula + ' × 3（三家都要给钱）';
+  }
+  return formula;
 }
 
 function App() {
@@ -73,6 +117,13 @@ function App() {
     setResult(null);
   };
 
+  // 新增：仅刷新胡牌类型，不重置答题统计
+  const handleRefreshTypes = () => {
+    setHuTypes(getRandomHuTypes());
+    setInput('');
+    setResult(null);
+  };
+
   return (
     <div className="container">
       <h1>川麻胡牌计分练习</h1>
@@ -93,29 +144,31 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {HU_TYPES.map(type => (
-                <tr key={type.name}>
-                  <td>{type.name}</td>
+              {HU_TYPES.map((type, idx) => (
+                <tr key={type.name + idx}>
+                  <td>{type.name}{type.mingGangType ? `（${type.mingGangType}）` : ''}</td>
                   <td>×{type.multiplier}</td>
                   <td>{type.desc}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p style={{marginTop:8}}>多种胡牌类型可叠加倍数。例如：清一色+自摸=10×4×2=80分</p>
+          <p style={{marginTop:8}}>多种胡牌类型可叠加倍数。例如：清一色+自摸=10×4×2=80分。明杠分为点杠（只收一家）和自杠（三家都要给钱）。</p>
         </div>
       ) : (
         <div className="practice-panel">
           <h2>练习区</h2>
           <div className="question">
             <div>底分：<b>{BASE_SCORE}</b> 分</div>
-            <div>胡牌类型：
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span>胡牌类型：</span>
               {huTypes.map((t, idx) => (
                 <>
-                  <span className="hu-tag" key={t.name}>{t.name}</span>
+                  <span className="hu-tag" key={t.name + (t.mingGangType||'')}>{t.name}{t.mingGangType ? `（${t.mingGangType}）` : ''}</span>
                   {idx !== huTypes.length - 1 && <span style={{color:'#1677ff',fontWeight:700,margin:'0 4px'}}>+</span>}
                 </>
               ))}
+              <button className="refresh-btn" onClick={handleRefreshTypes} title="换一组胡牌类型" style={{marginLeft:8,padding:'2px 10px',borderRadius:6,border:'1.5px solid #b3d2ff',background:'#f5f7fa',color:'#1677ff',cursor:'pointer',fontSize:15}}>刷新</button>
             </div>
           </div>
           <form onSubmit={handleSubmit} className="answer-form">
