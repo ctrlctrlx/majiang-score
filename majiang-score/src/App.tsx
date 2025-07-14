@@ -65,27 +65,22 @@ function getRandomHuTypes(): HuTypeWithCount[] {
 }
 
 function calcScore(types: HuTypeWithCount[]): number {
-  // 先算点炮/自摸等主胡分（如点炮*3），再加所有杠分
+  // 所有分数都以三家总和为准
   let total = 0;
   let mainType = types.find(t => t.name === '点炮' || t.name === '自摸');
   if (mainType) {
-    // 主胡分：如点炮*3家，自摸*3家
     total += BASE_SCORE * mainType.multiplier * 3;
   }
-  // 其他类型（如清一色、碰碰胡等）叠加到主胡分
   types.forEach(t => {
     if (t === mainType) return;
     if (t.name === '明杠' && t.mingGangType === '点杠') {
-      // 点杠每次只收一家的钱
-      total += BASE_SCORE * t.multiplier * (t.count || 1);
+      // 点杠每次都收三家
+      total += BASE_SCORE * t.multiplier * (t.count || 1) * 3;
     } else if (t.name === '暗杠') {
-      // 暗杠每次收三家
       total += BASE_SCORE * t.multiplier * (t.count || 1) * 3;
     } else if (t.name === '明杠' && t.mingGangType === '自杠') {
-      // 明杠自杠只出现一次，三家都要给钱
       total += BASE_SCORE * t.multiplier * 3;
     } else if (t.name !== '点炮' && t.name !== '自摸') {
-      // 其他类型倍数叠加到主胡分
       if (mainType) {
         total += BASE_SCORE * mainType.multiplier * 3 * (t.multiplier - 1);
       } else {
@@ -105,7 +100,7 @@ function calcFormula(types: HuTypeWithCount[]): string {
   types.forEach(t => {
     if (t === mainType) return;
     if (t.name === '明杠' && t.mingGangType === '点杠') {
-      formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}`);
+      formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}×3`);
     } else if (t.name === '暗杠') {
       formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}×3`);
     } else if (t.name === '明杠' && t.mingGangType === '自杠') {
