@@ -10,6 +10,10 @@ interface HuType {
   mingGangType?: '点杠' | '自杠'; // 仅明杠用
 }
 
+interface HuTypeWithCount extends HuType {
+  count?: number; // 点杠/暗杠次数
+}
+
 const HU_TYPES: HuType[] = [
   { name: "自摸", multiplier: 2, desc: "自己摸到胡牌" },
   { name: "点炮", multiplier: 1, desc: "别人打出胡牌" },
@@ -27,68 +31,101 @@ const HU_TYPES: HuType[] = [
   { name: "暗杠", multiplier: 4, desc: "暗杠得分，三家都要给钱" }
 ];
 
-function getRandomHuTypes(): HuType[] {
+function getRandomHuTypes(): HuTypeWithCount[] {
   // 随机生成1~3种胡牌类型组合，且不重复
   const count = Math.floor(Math.random() * 3) + 1;
   const shuffled = [...HU_TYPES].sort(() => 0.5 - Math.random());
-  // 明杠只允许出现一种（点杠或自杠），且不与另一个明杠共存
-  let result: HuType[] = [];
+  let result: HuTypeWithCount[] = [];
+  let hasMingGang = false;
+  let hasAnGang = false;
   for (let i = 0; i < shuffled.length && result.length < count; i++) {
     const t = shuffled[i];
-    if (t.name === '明杠' && result.some(x => x.name === '明杠')) continue;
-    result.push(t);
+    if (t.name === '明杠' && hasMingGang) continue;
+    if (t.name === '明杠') {
+      hasMingGang = true;
+      // 只允许点杠出现多次，自杠只出现一次
+      if (t.mingGangType === '点杠') {
+        const gangCount = Math.floor(Math.random() * 2) + 1; // 1~2次
+        result.push({ ...t, count: gangCount });
+      } else {
+        result.push({ ...t, count: 1 });
+      }
+      continue;
+    }
+    if (t.name === '暗杠') {
+      if (hasAnGang) continue;
+      hasAnGang = true;
+      const gangCount = Math.floor(Math.random() * 2) + 1; // 1~2次
+      result.push({ ...t, count: gangCount });
+      continue;
+    }
+    result.push({ ...t });
   }
   return result;
 }
 
-function calcScore(types: HuType[]): number {
-  // 明杠-点杠：只收一家的钱，显示单家得分
-  // 明杠-自杠、暗杠：三家都要给钱，显示总得分
-  let base = BASE_SCORE;
-  let multi = 1;
-  let mingGang: HuType | undefined = types.find(t => t.name === '明杠');
-  let anGang: HuType | undefined = types.find(t => t.name === '暗杠');
+function calcScore(types: HuTypeWithCount[]): number {
+  // 先算点炮/自摸等主胡分（如点炮*3），再加所有杠分
+  let total = 0;
+  let mainType = types.find(t => t.name === '点炮' || t.name === '自摸');
+  if (mainType) {
+    // 主胡分：如点炮*3家，自摸*3家
+    total += BASE_SCORE * mainType.multiplier * 3;
+  }
+  // 其他类型（如清一色、碰碰胡等）叠加到主胡分
   types.forEach(t => {
-    if (t.name === '明杠' || t.name === '暗杠') {
-      multi *= t.multiplier;
-    } else {
-      multi *= t.multiplier;
+    if (t === mainType) return;
+    if (t.name === '明杠' && t.mingGangType === '点杠') {
+      // 点杠每次只收一家的钱
+      total += BASE_SCORE * t.multiplier * (t.count || 1);
+    } else if (t.name === '暗杠') {
+      // 暗杠每次收三家
+      total += BASE_SCORE * t.multiplier * (t.count || 1) * 3;
+    } else if (t.name === '明杠' && t.mingGangType === '自杠') {
+      // 明杠自杠只出现一次，三家都要给钱
+      total += BASE_SCORE * t.multiplier * 3;
+    } else if (t.name !== '点炮' && t.name !== '自摸') {
+      // 其他类型倍数叠加到主胡分
+      if (mainType) {
+        total += BASE_SCORE * mainType.multiplier * 3 * (t.multiplier - 1);
+      } else {
+        total += BASE_SCORE * t.multiplier * 3;
+      }
     }
   });
-  if (mingGang && mingGang.mingGangType === '点杠') {
-    // 只收一家的钱
-    return base * multi;
-  } else if (mingGang && mingGang.mingGangType === '自杠') {
-    // 三家都要给钱
-    return base * multi * 3;
-  } else if (anGang) {
-    // 暗杠三家都要给钱
-    return base * multi * 3;
-  }
-  return base * multi;
+  return total;
 }
 
-function calcFormula(types: HuType[]): string {
-  let base = BASE_SCORE;
-  let multiArr = types.map(t => t.multiplier);
-  let mingGang: HuType | undefined = types.find(t => t.name === '明杠');
-  let anGang: HuType | undefined = types.find(t => t.name === '暗杠');
-  let formula = [base, ...multiArr].join(' × ');
-  if (mingGang && mingGang.mingGangType === '点杠') {
-    return formula + '（只收一家）';
-  } else if (mingGang && mingGang.mingGangType === '自杠') {
-    return formula + ' × 3（三家都要给钱）';
-  } else if (anGang) {
-    return formula + ' × 3（三家都要给钱）';
+function calcFormula(types: HuTypeWithCount[]): string {
+  let mainType = types.find(t => t.name === '点炮' || t.name === '自摸');
+  let formulaArr: string[] = [];
+  if (mainType) {
+    formulaArr.push(`${BASE_SCORE}×${mainType.multiplier}×3`);
   }
-  return formula;
+  types.forEach(t => {
+    if (t === mainType) return;
+    if (t.name === '明杠' && t.mingGangType === '点杠') {
+      formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}`);
+    } else if (t.name === '暗杠') {
+      formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}×3`);
+    } else if (t.name === '明杠' && t.mingGangType === '自杠') {
+      formulaArr.push(`${BASE_SCORE}×${t.multiplier}×3`);
+    } else if (t.name !== '点炮' && t.name !== '自摸') {
+      if (mainType) {
+        formulaArr.push(`${BASE_SCORE}×${mainType.multiplier}×3×${t.multiplier - 1}`);
+      } else {
+        formulaArr.push(`${BASE_SCORE}×${t.multiplier}×3`);
+      }
+    }
+  });
+  return formulaArr.join(' + ');
 }
 
 function App() {
   // 规则说明/练习区切换
   const [showRule, setShowRule] = useState(true);
   // 当前题目
-  const [huTypes, setHuTypes] = useState<HuType[]>(getRandomHuTypes());
+  const [huTypes, setHuTypes] = useState<HuTypeWithCount[]>(getRandomHuTypes());
   // 用户输入
   const [input, setInput] = useState('');
   // 答案反馈
@@ -124,6 +161,10 @@ function App() {
     setResult(null);
   };
 
+  // 统计点杠、暗杠次数
+  const dianGang = huTypes.find(t => t.name === '明杠' && t.mingGangType === '点杠');
+  const anGang = huTypes.find(t => t.name === '暗杠');
+
   return (
     <div className="container">
       <h1>川麻胡牌计分练习</h1>
@@ -153,7 +194,7 @@ function App() {
               ))}
             </tbody>
           </table>
-          <p style={{marginTop:8}}>多种胡牌类型可叠加倍数。例如：清一色+自摸=10×4×2=80分。明杠分为点杠（只收一家）和自杠（三家都要给钱）。</p>
+          <p style={{marginTop:8}}>多种胡牌类型可叠加倍数。例如：清一色+自摸=10×4×2=80分。点杠、暗杠可多次出现，点杠每次收一家的钱，暗杠每次收三家。</p>
         </div>
       ) : (
         <div className="practice-panel">
@@ -164,11 +205,15 @@ function App() {
               <span>胡牌类型：</span>
               {huTypes.map((t, idx) => (
                 <>
-                  <span className="hu-tag" key={t.name + (t.mingGangType||'')}>{t.name}{t.mingGangType ? `（${t.mingGangType}）` : ''}</span>
+                  <span className="hu-tag" key={t.name + (t.mingGangType||'')}>{t.name}{t.mingGangType ? `（${t.mingGangType}）` : ''}{(t.count && (t.name==='明杠'||t.name==='暗杠')) ? `×${t.count}` : ''}</span>
                   {idx !== huTypes.length - 1 && <span style={{color:'#1677ff',fontWeight:700,margin:'0 4px'}}>+</span>}
                 </>
               ))}
               <button className="refresh-btn" onClick={handleRefreshTypes} title="换一组胡牌类型" style={{marginLeft:8,padding:'2px 10px',borderRadius:6,border:'1.5px solid #b3d2ff',background:'#f5f7fa',color:'#1677ff',cursor:'pointer',fontSize:15}}>刷新</button>
+            </div>
+            <div style={{marginTop:8, color:'#1677ff', fontSize:15}}>
+              {dianGang && <span>点杠次数：{dianGang.count || 1} </span>}
+              {anGang && <span style={{marginLeft:12}}>暗杠次数：{anGang.count || 1}</span>}
             </div>
           </div>
           <form onSubmit={handleSubmit} className="answer-form">
