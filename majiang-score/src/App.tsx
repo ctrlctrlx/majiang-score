@@ -20,7 +20,9 @@ const HU_TYPES: HuType[] = [
   { name: "抢杠胡", multiplier: 2, desc: "抢别人加杠胡" },
   { name: "混一色", multiplier: 2, desc: "一种花色+字牌" },
   { name: "带幺九", multiplier: 2, desc: "每组都有1或9" },
-  { name: "门清", multiplier: 2, desc: "没有碰过牌" }
+  { name: "门清", multiplier: 2, desc: "没有碰过牌" },
+  { name: "明杠", multiplier: 2, desc: "明杠得分" },
+  { name: "暗杠", multiplier: 4, desc: "暗杠得分" }
 ];
 
 function getRandomHuTypes(): HuType[] {
