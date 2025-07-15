@@ -117,8 +117,8 @@ function calcFormula(types: HuTypeWithCount[]): string {
 }
 
 function App() {
-  // 规则说明/练习区切换
-  const [showRule, setShowRule] = useState(true);
+  // 规则说明/练习区切换，默认进入练习区
+  const [showRule, setShowRule] = useState(false);
   // 当前题目
   const [huTypes, setHuTypes] = useState<HuTypeWithCount[]>(getRandomHuTypes());
   // 用户输入
@@ -163,9 +163,17 @@ function App() {
   return (
     <div className="container">
       <h1>川麻胡牌计分练习</h1>
-      <div className="nav">
-        <button onClick={() => setShowRule(true)} className={showRule ? 'active' : ''}>计分规则说明</button>
-        <button onClick={() => setShowRule(false)} className={!showRule ? 'active' : ''}>开始练习</button>
+      <div className="nav" style={{marginBottom: 28, gap: 12, flexWrap: 'wrap'}}>
+        <button 
+          onClick={() => setShowRule(true)} 
+          className={showRule ? 'active' : ''}
+          style={{fontSize: 18, padding: '12px 24px', minWidth: 110, borderRadius: 8, margin: 0, border: 'none'}}
+        >计分规则说明</button>
+        <button 
+          onClick={() => setShowRule(false)} 
+          className={!showRule ? 'active' : ''}
+          style={{fontSize: 18, padding: '12px 24px', minWidth: 110, borderRadius: 8, margin: 0, border: 'none'}}
+        >开始练习</button>
       </div>
       {showRule ? (
         <div className="rule-panel">
