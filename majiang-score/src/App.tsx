@@ -65,7 +65,7 @@ function getRandomHuTypes(): HuTypeWithCount[] {
 }
 
 function calcScore(types: HuTypeWithCount[]): number {
-  // 所有分数都以三家总和为准
+  // 明杠（点杠）每次只收一家，其余类型三家总和
   let total = 0;
   let mainType = types.find(t => t.name === '点炮' || t.name === '自摸');
   if (mainType) {
@@ -74,8 +74,8 @@ function calcScore(types: HuTypeWithCount[]): number {
   types.forEach(t => {
     if (t === mainType) return;
     if (t.name === '明杠' && t.mingGangType === '点杠') {
-      // 点杠每次都收三家
-      total += BASE_SCORE * t.multiplier * (t.count || 1) * 3;
+      // 点杠每次只收一家
+      total += BASE_SCORE * t.multiplier * (t.count || 1);
     } else if (t.name === '暗杠') {
       total += BASE_SCORE * t.multiplier * (t.count || 1) * 3;
     } else if (t.name === '明杠' && t.mingGangType === '自杠') {
@@ -100,7 +100,7 @@ function calcFormula(types: HuTypeWithCount[]): string {
   types.forEach(t => {
     if (t === mainType) return;
     if (t.name === '明杠' && t.mingGangType === '点杠') {
-      formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}×3`);
+      formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}`);
     } else if (t.name === '暗杠') {
       formulaArr.push(`${BASE_SCORE}×${t.multiplier}×${t.count || 1}×3`);
     } else if (t.name === '明杠' && t.mingGangType === '自杠') {
