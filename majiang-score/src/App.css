@@ -5,9 +5,9 @@ body, #root {
   font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
   width: 100vw;
   height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* 移除flex居中，允许页面自然流式布局和滚动 */
+  /* display: flex; align-items: center; justify-content: center; */
+  overflow-x: hidden;
 }
 
 .container {
@@ -18,8 +18,11 @@ body, #root {
   box-shadow: 0 4px 32px rgba(22,119,255,0.08), 0 1.5px 8px rgba(0,0,0,0.04);
   padding: 28px 8vw 24px 8vw;
   transition: box-shadow 0.3s;
-  margin: 0;
+  margin: 32px auto 0 auto;
   position: relative;
+  min-height: 100vh;
+  height: auto;
+  overflow-y: auto;
 }
 .container:hover {
   box-shadow: 0 8px 40px rgba(22,119,255,0.13), 0 2px 12px rgba(0,0,0,0.07);
@@ -246,6 +249,10 @@ footer {
   .container {
     max-width: 100vw;
     padding: 10px 2vw 16px 2vw;
+    margin: 8px auto 0 auto;
+    min-height: 100vh;
+    height: auto;
+    overflow-y: auto;
   }
   .nav button {
     font-size: 19px;
@@ -274,6 +281,10 @@ footer {
   .container {
     max-width: 100vw;
     padding: 4px 1vw 8px 1vw;
+    margin: 2px auto 0 auto;
+    min-height: 100vh;
+    height: auto;
+    overflow-y: auto;
   }
   .nav button {
     font-size: 18px;
